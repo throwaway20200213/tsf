@@ -26,6 +26,15 @@ function parseNeighbour(row) {
   };
 }
 
+function calculateAverageLevel(device) {
+  const sumOfLevels = device.neighbours.reduce((acc, neighbour) => {
+    return acc + neighbour.level;
+  }, 0);
+
+  device["average_level"] = sumOfLevels / device.neighbours.length;
+  return device;
+}
+
 // Group devices by device id
 // and list neightbours
 function parseDevices(rows) {
@@ -46,7 +55,7 @@ function parseDevices(rows) {
   }, {});
 
   // Object.values() to remove the keys that were only being used for grouping purposes
-  return Object.values(groupedDevices);
+  return Object.values(groupedDevices).map(calculateAverageLevel);
 }
 
 // list all devices endpoint
@@ -84,7 +93,7 @@ app.get('/devices/:id', (req, res) => {
       return acc;
     }, {});
 
-    res.json(response);
+    res.json(calculateAverageLevel(response));
   });
 });
 
