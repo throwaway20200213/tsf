@@ -17,6 +17,15 @@ const SELECT_DEVICES_QUERY = `
   ON devices.id = connections.device_id
 `;
 
+function parseNeighbour(row) {
+  return {
+    remote_device_id: row.neighbour_id,
+    time: row.timestamp,
+    interface: row.interface,
+    level: row.level
+  };
+}
+
 // list all devices endpoint
 app.get('/devices', (req, res) => {
   db.all(SELECT_DEVICES_QUERY, [], (err, rows) => {
@@ -37,21 +46,41 @@ app.get('/devices', (req, res) => {
         acc[row.device_id]["neighbours"] = [];
       }
 
-      const neighbour = {
-        remote_device_id: row.neighbour_id,
-        time: row.timestamp,
-        interface: row.interface,
-        level: row.level
-      };
-
-      acc[row.device_id]["neighbours"].push(neighbour);
+      acc[row.device_id]["neighbours"].push(parseNeighbour(row));
 
       return acc;
-
     }, {});
 
     // Object.values() to remove the keys that were only being used for grouping purposes
     res.json(Object.values(devices));
+  });
+});
+
+app.get('/devices/:id', (req, res) => {
+  const query = `${SELECT_DEVICES_QUERY} WHERE devices.id = ?`;
+
+  db.all(query, [req.params.id], (err,rows) => {
+    if (err) {
+      throw err;
+    }
+
+    if (!rows.length) {
+      res.status(404);
+    }
+
+    const response = rows.reduce((acc, row) => {
+      acc["device_id"] = row.device_id;
+
+      if (acc["neighbours"] === undefined) {
+        acc["neighbours"] = [];
+      }
+
+      acc["neighbours"].push(parseNeighbour(row));
+
+      return acc;
+    }, {});
+
+    res.json(response);
   });
 });
 
