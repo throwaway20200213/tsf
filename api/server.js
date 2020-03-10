@@ -26,6 +26,29 @@ function parseNeighbour(row) {
   };
 }
 
+// Group devices by device id
+// and list neightbours
+function parseDevices(rows) {
+  const groupedDevices = rows.reduce((acc, row) => {
+    if (acc[row.device_id] === undefined) {
+      acc[row.device_id] = {};
+    }
+
+    acc[row.device_id]["device_id"] = row.device_id;
+
+    if (acc[row.device_id]["neighbours"] === undefined) {
+      acc[row.device_id]["neighbours"] = [];
+    }
+
+    acc[row.device_id]["neighbours"].push(parseNeighbour(row));
+
+    return acc;
+  }, {});
+
+  // Object.values() to remove the keys that were only being used for grouping purposes
+  return Object.values(groupedDevices);
+}
+
 // list all devices endpoint
 app.get('/devices', (req, res) => {
   db.all(SELECT_DEVICES_QUERY, [], (err, rows) => {
@@ -33,26 +56,7 @@ app.get('/devices', (req, res) => {
       throw err;
     }
 
-    // Group devices by device id
-    // and list neightbours
-    const devices = rows.reduce((acc, row) => {
-      if (acc[row.device_id] === undefined) {
-        acc[row.device_id] = {};
-      }
-
-      acc[row.device_id]["device_id"] = row.device_id;
-
-      if (acc[row.device_id]["neighbours"] === undefined) {
-        acc[row.device_id]["neighbours"] = [];
-      }
-
-      acc[row.device_id]["neighbours"].push(parseNeighbour(row));
-
-      return acc;
-    }, {});
-
-    // Object.values() to remove the keys that were only being used for grouping purposes
-    res.json(Object.values(devices));
+    res.json(parseDevices(rows));
   });
 });
 
@@ -81,6 +85,23 @@ app.get('/devices/:id', (req, res) => {
     }, {});
 
     res.json(response);
+  });
+});
+
+// Show all connections for a device (local & remote)
+app.get('/devices/:id/connections', (req, res) => {
+  const query = `${SELECT_DEVICES_QUERY} WHERE devices.id = ? OR connections.neighbour_id = ?`;
+
+  db.all(query, [req.params.id, req.params.id], (err, rows) => {
+    if (err) {
+      throw err;
+    }
+
+    if (!rows.length) {
+      res.status(404);
+    }
+
+    res.json(parseDevices(rows));
   });
 });
 
