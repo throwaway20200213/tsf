@@ -1,6 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
 
-let db = new sqlite3.Database('./db/sqlite.db');
+const db = new sqlite3.Database('./db/sqlite.db');
 
 db.run('CREATE TABLE devices(id VARCHAR(32) PRIMARY KEY)');
 
